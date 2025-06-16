@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Compact List</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin: 4px 0;
+        }
+    </style>
+</head>
+<body>
+<h2>My List</h2>
+<ul id="item-list">
+    <li>Loading items...</li>
+</ul>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const listElement = document.getElementById("item-list");
+        const apiUrl = "/api/items";
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to fetch items");
+                }
+                return response.json();
+            })
+            .then(items => {
+                listElement.innerHTML = ""; // Clear placeholder
+                items.items.forEach(item => {
+                    const li = document.createElement("li");
+                    li.textContent = item;
+                    listElement.appendChild(li);
+                });
+            })
+            .catch(error => {
+                console.error("Error loading items:", error);
+                listElement.innerHTML = "<li>Error loading items</li>";
+            });
+    });
+</script>
+</body>
+</html>
