@@ -7,10 +7,13 @@
         body {
             margin: 0;
             font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
         .container {
             display: flex;
-            height: 100vh;
+            flex: 1;
         }
         .left-panel {
             width: 50%;
@@ -52,6 +55,7 @@
             border: 1px solid #ddd;
         }
         th, td {
+            border: 1px solid #ddd;
             padding: 10px;
             text-align: left;
         }
@@ -76,6 +80,33 @@
             border: none;
             padding: 5px 10px;
             cursor: pointer;
+        }
+        .progress-container {
+            padding: 10px;
+            border-top: 1px solid #ccc;
+            background: #f9f9f9;
+            font-size: 14px;
+            height: 120px;
+            overflow-y: auto;
+        }
+        .progress-bar {
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            position: relative;
+            height: 20px;
+        }
+        .progress-fill {
+            background: #4caf50;
+            height: 100%;
+            width: 0;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            text-align: right;
+            color: white;
+            font-size: 12px;
+            line-height: 20px;
+            padding-right: 5px;
         }
     </style>
 </head>
@@ -107,9 +138,14 @@
     </div>
 </div>
 
+<div class="progress-container" id="progressContainer">
+    <!-- Upload progress bars appear here -->
+</div>
+
 <script>
     const fileList = document.getElementById('fileList');
     const searchInput = document.getElementById('searchInput');
+    const progressContainer = document.getElementById('progressContainer');
 
     // Example files
     let files = ["report.pdf", "image.png", "notes.txt"];
@@ -144,6 +180,17 @@
     function resetSearch() {
         searchInput.value = '';
         filterFiles();
+    }
+
+    function createProgressBar(filename) {
+        const bar = document.createElement('div');
+        bar.className = 'progress-bar';
+        const fill = document.createElement('div');
+        fill.className = 'progress-fill';
+        fill.innerText = filename + ': 0%';
+        bar.appendChild(fill);
+        progressContainer.appendChild(bar);
+        return fill;
     }
 
     document.addEventListener("DOMContentLoaded", function () {
@@ -191,10 +238,41 @@
         dropzone.classList.remove('dragover');
 
         const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            confirmAndUploadFiles(files);
+        const isConfirmed = confirm(`Are you sure you want to upload '${files.length}' file(s)?`);
+        if (isConfirmed) {
+            for (let file of files) {
+                uploadFile(file);
+            }
         }
     });
+
+    function uploadFile(file) {
+        const url = window.location.href.replace(/\/$/, '') + '/upload';
+        const xhr = new XMLHttpRequest();
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const progressFill = createProgressBar(file.name);
+
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                progressFill.style.width = percent + '%';
+                progressFill.textContent = file.name + ': ' + percent + '%';
+            }
+        });
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                files.push(file.name);
+                renderFiles();
+                filterFiles();
+            }
+        };
+
+        xhr.open('POST', url, true);
+        xhr.send(formData);
+    }
 
     function confirmAndUploadFiles(files) {
         const formData = new FormData();
