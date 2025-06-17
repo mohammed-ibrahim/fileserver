@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>File Manager</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .left-panel {
+            width: 50%;
+            border-right: 1px solid #ccc;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        .right-panel {
+            width: 50%;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .search-bar input {
+            flex: 1;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .search-bar button {
+            padding: 8px 12px;
+            background-color: #888;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        .drop-area {
+            width: 100%;
+            height: 300px;
+            border: 2px dashed #aaa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #777;
+            cursor: pointer;
+        }
+        .drop-area.dragover {
+            background-color: #f0f8ff;
+            border-color: #333;
+        }
+        button.delete {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="left-panel">
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search files..." onkeyup="filterFiles()">
+            <button onclick="resetSearch()">Reset</button>
+        </div>
+        <table id="fileTable">
+            <thead>
+            <tr>
+                <th>File Name</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody id="fileList">
+            <!-- Files will be listed here -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="right-panel">
+        <div class="drop-area" id="dropzone">
+            Drag & Drop files here to upload
+        </div>
+    </div>
+</div>
+
+<script>
+    const fileList = document.getElementById('fileList');
+    const searchInput = document.getElementById('searchInput');
+
+    // Example files
+    let files = ["report.pdf", "image.png", "notes.txt"];
+
+    function renderFiles() {
+        fileList.innerHTML = '';
+        files.forEach((file, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+        <td>${file}</td>
+        <td><button class="delete" onclick="deleteFile(${index})">Delete</button></td>
+      `;
+            fileList.appendChild(row);
+        });
+    }
+
+    function deleteFile(index) {
+        files.splice(index, 1);
+        renderFiles();
+        filterFiles(); // Apply current filter again after deletion
+    }
+
+    function filterFiles() {
+        const query = searchInput.value.toLowerCase();
+        const rows = fileList.getElementsByTagName('tr');
+        for (let row of rows) {
+            const fileName = row.cells[0].innerText.toLowerCase();
+            row.style.display = fileName.includes(query) ? '' : 'none';
+        }
+    }
+
+    function resetSearch() {
+        searchInput.value = '';
+        filterFiles();
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const tableBody = document.getElementById("fileTable");
+        const apiUrl = "/api/items";
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to fetch items");
+                }
+                return response.json();
+            })
+            .then(items => {
+                tableBody.innerHTML = ""; // Clear placeholder
+                items.items.forEach(item => {
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item}</td>
+                        <td><button class="delete" onclick="deleteFile(1)">Delete</button></td>
+                      `;
+
+                    tableBody.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error("Error loading items:", error);
+                tableBody.innerHTML = "<li>Error loading items</li>";
+            });
+    });
+
+    const dropzone = document.getElementById('dropzone');
+
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            confirmAndUploadFiles(files);
+        }
+    });
+
+    function confirmAndUploadFiles(files) {
+        const formData = new FormData();
+
+        for (let file of files) {
+            const isConfirmed = confirm(`Are you sure you want to upload '${file.name}'?`);
+            if (isConfirmed) {
+                formData.append('files[]', file);
+            }
+        }
+
+        if (formData.has('files[]')) {
+            // Build URL with /upload appended to current path
+            const currentUrl = new URL(window.location.href);
+            currentUrl.pathname = currentUrl.pathname.replace(/\/$/, '') + '/upload';
+            const uploadUrl = currentUrl.toString();
+
+            fetch(uploadUrl, {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.text())
+                .then(result => alert('Upload success: ' + result))
+                .catch(error => alert('Upload error: ' + error));
+        } else {
+            alert('No files were selected for upload.');
+        }
+    }
+</script>
+
+</body>
+</html>

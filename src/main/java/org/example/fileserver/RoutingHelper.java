@@ -37,7 +37,7 @@ public class RoutingHelper {
     }
 
     public static Future<Object> renderHomePage(RoutingContext routingContext) {
-        String homePage = loadHtmlFromResources("homePage.html");
+        String homePage = loadHtmlFromResources("homePageV2.html");
         routingContext.response().end(homePage);
         return Future.succeededFuture(homePage);
     }
