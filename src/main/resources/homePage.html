@@ -14,13 +14,30 @@
         li {
             margin: 4px 0;
         }
+        #dropzone {
+            width: 100%;
+            max-width: 400px;
+            height: 200px;
+            border: 2px dashed #aaa;
+            border-radius: 10px;
+            text-align: center;
+            line-height: 200px;
+            margin: 50px auto;
+            color: #666;
+            font-family: sans-serif;
+        }
+        #dropzone.dragover {
+            border-color: #333;
+            color: #000;
+        }
     </style>
 </head>
 <body>
-<h2>My List</h2>
 <ul id="item-list">
     <li>Loading items...</li>
 </ul>
+
+<div id="dropzone">Drag and drop files here</div>
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
@@ -46,6 +63,55 @@
                 listElement.innerHTML = "<li>Error loading items</li>";
             });
     });
+
+    const dropzone = document.getElementById('dropzone');
+
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            confirmAndUploadFiles(files);
+        }
+    });
+
+    function confirmAndUploadFiles(files) {
+        const formData = new FormData();
+
+        for (let file of files) {
+            const isConfirmed = confirm(`Are you sure you want to upload '${file.name}'?`);
+            if (isConfirmed) {
+                formData.append('files[]', file);
+            }
+        }
+
+        if (formData.has('files[]')) {
+            // Build URL with /upload appended to current path
+            const currentUrl = new URL(window.location.href);
+            currentUrl.pathname = currentUrl.pathname.replace(/\/$/, '') + '/upload';
+            const uploadUrl = currentUrl.toString();
+
+            fetch(uploadUrl, {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.text())
+                .then(result => alert('Upload success: ' + result))
+                .catch(error => alert('Upload error: ' + error));
+        } else {
+            alert('No files were selected for upload.');
+        }
+    }
 </script>
 </body>
 </html>
