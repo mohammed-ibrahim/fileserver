@@ -148,24 +148,24 @@
     const progressContainer = document.getElementById('progressContainer');
 
     // Example files
-    let files = ["report.pdf", "image.png", "notes.txt"];
+    // let files = ["report.pdf", "image.png", "notes.txt"];
 
-    function renderFiles() {
-        fileList.innerHTML = '';
-        files.forEach((file, index) => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-        <td>${file}</td>
-        <td><button class="delete" onclick="deleteFile(${index})">Delete</button></td>
-      `;
-            fileList.appendChild(row);
-        });
-    }
+    // function renderFiles() {
+    //     fileList.innerHTML = '';
+    //     files.forEach((file, index) => {
+    //         const row = document.createElement('tr');
+    //         row.innerHTML = `
+    //     <td>${file}</td>
+    //     <td><button class="delete" onclick="deleteFile(${index})">Delete</button></td>
+    //   `;
+    //         fileList.appendChild(row);
+    //     });
+    // }
 
     function deleteFile(index) {
-        files.splice(index, 1);
-        renderFiles();
-        filterFiles(); // Apply current filter again after deletion
+        // files.splice(index, 1);
+        // renderFiles();
+        // filterFiles(); // Apply current filter again after deletion
     }
 
     function filterFiles() {
@@ -263,10 +263,12 @@
         });
 
         xhr.onreadystatechange = function() {
-            if (xhr.readyState === 4 && xhr.status === 200) {
-                files.push(file.name);
-                renderFiles();
-                filterFiles();
+            if (xhr.readyState === 4 && xhr.status === 204) {
+
+                setTimeout(function() {
+                    console.log("Reloading...")
+                    location.reload();
+                }, 2000);
             }
         };
 
