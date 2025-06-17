@@ -2,10 +2,9 @@ package org.example.fileserver;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Future;
-import io.vertx.core.internal.logging.Logger;
-import io.vertx.core.internal.logging.LoggerFactory;
 import io.vertx.ext.web.FileUpload;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.commons.io.FileUtils;
 
 import java.io.*;
 import java.util.Arrays;
@@ -68,13 +67,22 @@ public class RoutingHelper {
 
     public static Future<Object> uploadFile(RoutingContext routingContext) {
         routingContext.fileUploads().forEach( f -> {
-            dumpFileContents(f);
+            copyFileFromUploadsDirToWebDir(f);
         });
         
         return Future.succeededFuture();
     }
 
-    private static void dumpFileContents(FileUpload f) {
+    private static void copyFileFromUploadsDirToWebDir(FileUpload f) {
         System.out.println(f.uploadedFileName());
+        String filePath = FileNameHelper.getFileName("web", f.fileName());
+
+        try {
+            FileUtils.copyFile(new File(f.uploadedFileName()), new File(filePath));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        new File(f.uploadedFileName()).delete();
     }
 }
