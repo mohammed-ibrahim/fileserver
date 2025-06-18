@@ -50,7 +50,7 @@ public class RoutingHelper {
 
     public static Future<Object> listItems(RoutingContext routingContext) {
         try {
-            File directory = new File("web");
+            File directory = new File(Utils.getWebDirectory());
             File[] files = directory.listFiles();
             List<FileDetails> results = Arrays.stream(files)
                     .sorted(getFileTimeComparator())
@@ -147,7 +147,7 @@ public class RoutingHelper {
 
     private static void copyFileFromUploadsDirToWebDir(FileUpload f) {
         System.out.println(f.uploadedFileName());
-        String filePath = FileNameHelper.getFileName("web", f.fileName());
+        String filePath = FileNameHelper.getFileName(Utils.getWebDirectory(), f.fileName());
 
         try {
             FileUtils.copyFile(new File(f.uploadedFileName()), new File(filePath));
@@ -160,7 +160,7 @@ public class RoutingHelper {
 
     public static Future<Object> downloadFile(RoutingContext routingContext) {
         String fileId = routingContext.request().getParam("fileId");
-        File downloadable = Paths.get("web", fileId).toFile();
+        File downloadable = Paths.get(Utils.getWebDirectory(), fileId).toFile();
 
         if (downloadable.isFile()) {
             routingContext.response()
@@ -177,7 +177,7 @@ public class RoutingHelper {
 
     public static Future<Object> deleteFile(RoutingContext routingContext) {
         String fileId = routingContext.request().getParam("fileId");
-        File deletableFile = Paths.get("web", fileId).toFile();
+        File deletableFile = Paths.get(Utils.getWebDirectory(), fileId).toFile();
 
         if (deletableFile.isFile()) {
             deletableFile.delete();
