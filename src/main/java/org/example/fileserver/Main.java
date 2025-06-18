@@ -17,17 +17,13 @@ public class Main {
         HttpServer server = vertx.createHttpServer();
         Router router = Router.router(vertx);
 
-
         router.get("/").respond(RoutingHelper::renderHomePage);
+        router.get("/file/download/:fileId").respond(RoutingHelper::downloadFile);
         router.get("/api/items").respond(RoutingHelper::listItems);
+        router.delete("/file/:fileId").respond(RoutingHelper::deleteFile);
         router.post("/upload").handler(BodyHandler.create()
                 .setHandleFileUploads(true)
                 .setUploadsDirectory("uploads")).respond(RoutingHelper::uploadFile);
-
-
-        router
-                .put("/a/b")
-                .respond(RoutingHelper::handlePutRequest);
 
         server.requestHandler(router).listen(8080);
     }

@@ -147,25 +147,29 @@
     const searchInput = document.getElementById('searchInput');
     const progressContainer = document.getElementById('progressContainer');
 
-    // Example files
-    // let files = ["report.pdf", "image.png", "notes.txt"];
+    function deleteFile(fileId) {
 
-    // function renderFiles() {
-    //     fileList.innerHTML = '';
-    //     files.forEach((file, index) => {
-    //         const row = document.createElement('tr');
-    //         row.innerHTML = `
-    //     <td>${file}</td>
-    //     <td><button class="delete" onclick="deleteFile(${index})">Delete</button></td>
-    //   `;
-    //         fileList.appendChild(row);
-    //     });
-    // }
+        const isConfirmed = confirm(`Are you sure you want to delete '${fileId}'?`);
+        if (!isConfirmed) {
+            return;
+        }
 
-    function deleteFile(index) {
-        // files.splice(index, 1);
-        // renderFiles();
-        // filterFiles(); // Apply current filter again after deletion
+        const url = window.location.href.replace(/\/$/, '') + '/file' + fileId;
+        const xhr = new XMLHttpRequest();
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                console.log("Reloading...")
+                location.reload();
+            }
+
+            if (xhr.readyState === 4 && xhr.status !== 200) {
+                alert("Deletion of the file failed: " + fileId);
+            }
+        };
+
+        xhr.open('DELETE', url, true);
+        xhr.send();
     }
 
     function filterFiles() {
@@ -209,8 +213,10 @@
 
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${item}</td>
-                        <td><button class="delete" onclick="deleteFile(1)">Delete</button></td>
+                        <td><a href="/file/download/${item.fileName}">${item.fileName}</a></td>
+                        <td>${item.date}</td>
+                        <td>${item.size}</td>
+                        <td><button class="delete" onclick="deleteFile('/${item.fileName}')">Delete</button></td>
                       `;
 
                     tableBody.appendChild(row);
@@ -276,33 +282,6 @@
         xhr.send(formData);
     }
 
-    function confirmAndUploadFiles(files) {
-        const formData = new FormData();
-
-        for (let file of files) {
-            const isConfirmed = confirm(`Are you sure you want to upload '${file.name}'?`);
-            if (isConfirmed) {
-                formData.append('files[]', file);
-            }
-        }
-
-        if (formData.has('files[]')) {
-            // Build URL with /upload appended to current path
-            const currentUrl = new URL(window.location.href);
-            currentUrl.pathname = currentUrl.pathname.replace(/\/$/, '') + '/upload';
-            const uploadUrl = currentUrl.toString();
-
-            fetch(uploadUrl, {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.text())
-                .then(result => alert('Upload success: ' + result))
-                .catch(error => alert('Upload error: ' + error));
-        } else {
-            alert('No files were selected for upload.');
-        }
-    }
 </script>
 
 </body>
