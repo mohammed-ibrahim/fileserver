@@ -220,6 +220,8 @@ public class RoutingHelper {
         routingContext.fileUploads().forEach( f -> {
             copyFileFromUploadsDirToWebDir(f);
         });
+
+        routingContext.response().end();
     }
 
     private static void copyFileFromUploadsDirToWebDir(FileUpload f) {
