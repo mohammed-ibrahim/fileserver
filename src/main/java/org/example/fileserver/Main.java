@@ -54,8 +54,11 @@ public class Main {
 
         router.route().failureHandler(ctx -> {
             Throwable failure = ctx.failure();
-            System.err.println("Unmanaged error: " + failure.getMessage());
-            failure.printStackTrace();
+
+            if (failure != null) {
+                System.err.println("Unmanaged error: " + failure.getMessage());
+                failure.printStackTrace();
+            }
 
             ctx.response()
                     .setStatusCode(500)
@@ -77,20 +80,27 @@ public class Main {
         return Future.succeededFuture(new Object());
     }
 
-    private static Future<Object> withAuth(RoutingContext routingContext, Runnable action) {
+    private static void withAuth(RoutingContext routingContext, Runnable action) {
         Cookie authz = routingContext.request().getCookie("auth_token");
         if (authz != null && RoutingHelper.verifyToken(authz.getValue())) {
-            action.run();
+            try {
+                action.run();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         } else {
             RoutingHelper.unauthorized(routingContext);
         }
-        return Future.succeededFuture(new Object());
     }
 
     private static Future<Object> withRedirectToLoginPage(RoutingContext routingContext, Runnable action) {
         Cookie authz = routingContext.request().getCookie("auth_token");
         if (authz != null && RoutingHelper.verifyToken(authz.getValue())) {
-            action.run();
+            try {
+                action.run();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         } else {
             RoutingHelper.renderLoginPage(routingContext);
         }
