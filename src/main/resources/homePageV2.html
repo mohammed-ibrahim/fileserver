@@ -143,7 +143,6 @@
 </div>
 
 <script>
-    const fileList = document.getElementById('fileList');
     const searchInput = document.getElementById('searchInput');
     const progressContainer = document.getElementById('progressContainer');
 
@@ -173,9 +172,12 @@
     }
 
     function filterFiles() {
+        // console.log("Typed...");
         const query = searchInput.value.toLowerCase();
+        const fileList = document.getElementById('fileList');
         const rows = fileList.getElementsByTagName('tr');
         for (let row of rows) {
+            // console.log(row);
             const fileName = row.cells[0].innerText.toLowerCase();
             row.style.display = fileName.includes(query) ? '' : 'none';
         }

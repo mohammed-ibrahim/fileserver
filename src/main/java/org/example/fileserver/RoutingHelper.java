@@ -1,22 +1,20 @@
 package org.example.fileserver;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.vertx.core.Future;
-import io.vertx.core.file.AsyncFile;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.FileUpload;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.commons.io.FileUtils;
 
 import java.io.*;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class RoutingHelper {
@@ -42,13 +40,96 @@ public class RoutingHelper {
 
     }
 
-    public static Future<Object> renderHomePage(RoutingContext routingContext) {
+    public static void renderHomePage(RoutingContext routingContext) {
         String homePage = loadHtmlFromResources("homePageV2.html");
         routingContext.response().end(homePage);
-        return Future.succeededFuture(homePage);
     }
 
-    public static Future<Object> listItems(RoutingContext routingContext) {
+    public static boolean verifyToken(String token) {
+
+        try {
+            String decoded = URLDecoder.decode(token, StandardCharsets.UTF_8.name());
+            String [] parts = TokenUtils.decodeToken(decoded);
+            return isValidUser(Utils.getUserAuthFilePath(), parts[0], parts[1]);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean isValidUser(String fileName, String username, String password) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || !line.contains("=")) continue;
+
+                String[] parts = line.split("=", 2);
+                String fileUser = parts[0].trim();
+                String filePass = parts[1].trim();
+
+                if (fileUser.equals(username) && filePass.equals(password)) {
+                    return true;
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public static void performLogin(RoutingContext routingContext) {
+        String requestBody = routingContext.body().asString();
+
+        if (requestBody == null) {
+            routingContext.response()
+                    .setStatusCode(400)
+                    .putHeader("Content-Type", "application/json")
+                    .end(new JsonObject().put("error", "Invalid JSON").encode());
+            return;
+        }
+
+        LoginRequest loginRequest;
+        try {
+            loginRequest = MAPPER.readValue(requestBody, LoginRequest.class);
+        } catch (IOException e) {
+            fail(routingContext);
+            return;
+        }
+
+        String username = loginRequest.getUsername();
+        String password = loginRequest.getPassword();
+
+        try {
+            if (isValidUser(Utils.getUserAuthFilePath(), username, password)) {
+                routingContext.response()
+                        .putHeader("Content-Type", "application/json")
+                        .end(MAPPER.writeValueAsString(new LoginResponse(true, TokenUtils.generateToken(username, password))));
+
+            } else {
+                routingContext.response()
+                        .putHeader("Content-Type", "application/json")
+                        .end(MAPPER.writeValueAsString(new LoginResponse(false, "aaa")));
+
+            }
+        } catch (IOException e) {
+            fail(routingContext);
+        }
+
+    }
+
+
+
+    public static void unauthorized(RoutingContext routingContext) {
+        routingContext.response().setStatusCode(401).end("NOT FOUND");
+    }
+
+    public static void renderLoginPage(RoutingContext routingContext) {
+        String homePage = loadHtmlFromResources("loginPage.html");
+        routingContext.response().end(homePage);
+    }
+
+    public static void listItems(RoutingContext routingContext) {
         try {
             File directory = new File(Utils.getWebDirectory());
             File[] files = directory.listFiles();
@@ -66,9 +147,8 @@ public class RoutingHelper {
             routingContext.response().end(body);
         } catch (Exception e) {
             e.printStackTrace();
-            return fail(routingContext);
+            fail(routingContext);
         }
-        return Future.succeededFuture();
     }
 
     public static String getRelativeCreationDate(File file) {
@@ -131,18 +211,15 @@ public class RoutingHelper {
         };
     }
 
-    public static Future<Object> fail(RoutingContext ctx) {
+    public static void fail(RoutingContext ctx) {
         ctx.response().setStatusCode(500);
         ctx.response().end("Internal Server Error");
-        return Future.failedFuture("Internal Server Error");
     }
 
-    public static Future<Object> uploadFile(RoutingContext routingContext) {
+    public static void uploadFile(RoutingContext routingContext) {
         routingContext.fileUploads().forEach( f -> {
             copyFileFromUploadsDirToWebDir(f);
         });
-        
-        return Future.succeededFuture();
     }
 
     private static void copyFileFromUploadsDirToWebDir(FileUpload f) {
@@ -158,7 +235,7 @@ public class RoutingHelper {
         new File(f.uploadedFileName()).delete();
     }
 
-    public static Future<Object> downloadFile(RoutingContext routingContext) {
+    public static void downloadFile(RoutingContext routingContext) {
         String fileId = routingContext.request().getParam("fileId");
         File downloadable = Paths.get(Utils.getWebDirectory(), fileId).toFile();
 
@@ -167,26 +244,22 @@ public class RoutingHelper {
                     .putHeader("Content-Disposition", "attachment; filename=" + downloadable.getName())
                     .putHeader("Content-Type", "application/octet-stream")
                     .sendFile(downloadable.getPath());
-            return Future.succeededFuture();
         } else {
             routingContext.response().setStatusCode(404);
             routingContext.response().end("Not Found");
-            return Future.succeededFuture();
         }
     }
 
-    public static Future<Object> deleteFile(RoutingContext routingContext) {
+    public static void deleteFile(RoutingContext routingContext) {
         String fileId = routingContext.request().getParam("fileId");
         File deletableFile = Paths.get(Utils.getWebDirectory(), fileId).toFile();
 
         if (deletableFile.isFile()) {
             deletableFile.delete();
             routingContext.response().setStatusCode(200).end();
-            return Future.succeededFuture();
         } else {
             routingContext.response().setStatusCode(404);
             routingContext.response().end("Not Found");
-            return Future.succeededFuture();
         }
     }
 }

@@ -1,20 +1,26 @@
 package org.example.fileserver;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.Cookie;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.KeyStoreOptions;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.function.Supplier;
 
 public class Main {
+
     public static void main(String[] args) {
-        System.out.println("Hello, World!");
         Vertx vertx = Vertx.vertx();
 
         HttpServerOptions httpServerOptions = new HttpServerOptions().setPort(Utils.getPort());
@@ -35,13 +41,28 @@ public class Main {
 
         HttpServer server = vertx.createHttpServer(httpServerOptions);
         Router router = Router.router(vertx);
-        router.get("/").respond(RoutingHelper::renderHomePage);
-        router.get("/file/download/:fileId").respond(RoutingHelper::downloadFile);
-        router.get("/api/items").respond(RoutingHelper::listItems);
-        router.delete("/file/:fileId").respond(RoutingHelper::deleteFile);
+        router.get("/").handler(routingContext -> withRedirectToLoginPage(routingContext, () -> RoutingHelper.renderHomePage(routingContext)));
+        router.post("/login").handler(BodyHandler.create()).handler(routingContext -> {
+            RoutingHelper.performLogin(routingContext);
+        });
+        router.get("/file/download/:fileId").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.downloadFile(routingContext)));
+        router.get("/api/items").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.listItems(routingContext)));
+        router.delete("/file/:fileId").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.deleteFile(routingContext)));
         router.post("/upload").handler(BodyHandler.create()
                 .setHandleFileUploads(true)
-                .setUploadsDirectory(Utils.getTemporaryUploadsDirectory())).respond(RoutingHelper::uploadFile);
+                .setUploadsDirectory(Utils.getTemporaryUploadsDirectory())).handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.uploadFile(routingContext)));
+
+        router.route().failureHandler(ctx -> {
+            Throwable failure = ctx.failure();
+            System.err.println("Unmanaged error: " + failure.getMessage());
+            failure.printStackTrace();
+
+            ctx.response()
+                    .setStatusCode(500)
+                    .putHeader("Content-Type", "application/json")
+                    .end("{\"error\": \"Internal Server Error\"}");
+        });
+
 
         server.requestHandler(router).listen()
                 .onSuccess(res -> System.out.println("HTTP server started on port " + Utils.getPort()))
@@ -51,6 +72,30 @@ public class Main {
                 });
     }
 
+    private static Future<Object> submitAction(ExecutorService executorService, RoutingContext routingContext, Supplier action) {
+        CompletableFuture.runAsync(() -> action.get(), executorService);
+        return Future.succeededFuture(new Object());
+    }
+
+    private static Future<Object> withAuth(RoutingContext routingContext, Runnable action) {
+        Cookie authz = routingContext.request().getCookie("auth_token");
+        if (authz != null && RoutingHelper.verifyToken(authz.getValue())) {
+            action.run();
+        } else {
+            RoutingHelper.unauthorized(routingContext);
+        }
+        return Future.succeededFuture(new Object());
+    }
+
+    private static Future<Object> withRedirectToLoginPage(RoutingContext routingContext, Runnable action) {
+        Cookie authz = routingContext.request().getCookie("auth_token");
+        if (authz != null && RoutingHelper.verifyToken(authz.getValue())) {
+            action.run();
+        } else {
+            RoutingHelper.renderLoginPage(routingContext);
+        }
+        return Future.succeededFuture(new Object());
+    }
 
 
 }

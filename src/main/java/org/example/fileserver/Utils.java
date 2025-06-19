@@ -6,6 +6,10 @@ public class Utils {
         return getFromSystemPropertyOrDefault("uploads.dir", "web");
     }
 
+    public static String getUserAuthFilePath() {
+        return getFromSystemPropertyOrDefault("auth.file", "auth.conf");
+    }
+
     public static String getConfigDirectory() {
         return getFromSystemPropertyOrDefault("conf.dir", "conf");
     }
