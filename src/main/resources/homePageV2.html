@@ -47,6 +47,14 @@
             color: white;
             cursor: pointer;
         }
+        .info-bar {
+            background-color: #eef;
+            padding: 12px 20px;
+            border-bottom: 1px solid #ccd;
+            font-size: 15px;
+            text-align: center;
+            color: #333;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -111,6 +119,9 @@
     </style>
 </head>
 <body>
+<div class="info-bar" id="informationBar">
+    <strong>Info:</strong> Upload files by dragging them to the right panel. Use the search box to filter files.
+</div>
 
 <div class="container">
     <div class="left-panel">
@@ -143,7 +154,6 @@
 </div>
 
 <script>
-    const searchInput = document.getElementById('searchInput');
     const progressContainer = document.getElementById('progressContainer');
 
     function deleteFile(fileId) {
@@ -172,20 +182,27 @@
     }
 
     function filterFiles() {
-        // console.log("Typed...");
+        const searchInput = document.getElementById('searchInput');
         const query = searchInput.value.toLowerCase();
-        const fileList = document.getElementById('fileList');
-        const rows = fileList.getElementsByTagName('tr');
-        for (let row of rows) {
-            // console.log(row);
-            const fileName = row.cells[0].innerText.toLowerCase();
-            row.style.display = fileName.includes(query) ? '' : 'none';
+        if (query.length > 2) {
+            const fileList = document.getElementById('fileTable');
+            const rows = fileList.children;
+            for (let row of rows) {
+                const fileName = row.cells[0].innerText.toLowerCase();
+                row.style.display = fileName.includes(query) ? '' : 'none';
+            }
         }
     }
 
     function resetSearch() {
+        const searchInput = document.getElementById('searchInput');
         searchInput.value = '';
-        filterFiles();
+        const fileList = document.getElementById('fileTable');
+        const rows = fileList.children;
+        for (let row of rows) {
+            const fileName = row.cells[0].innerText.toLowerCase();
+            row.style.display = '';
+        }
     }
 
     function createProgressBar(filename) {
@@ -223,6 +240,9 @@
 
                     tableBody.appendChild(row);
                 });
+
+                const informationBar = document.getElementById("informationBar");
+                informationBar.innerHTML = `Total Size: ${items.total}, Number of Items: ${items.items.length}`;
             })
             .catch(error => {
                 console.error("Error loading items:", error);
@@ -249,12 +269,12 @@
         const isConfirmed = confirm(`Are you sure you want to upload '${files.length}' file(s)?`);
         if (isConfirmed) {
             for (let file of files) {
-                uploadFile(file);
+                uploadFile(file, files.length);
             }
         }
     });
 
-    function uploadFile(file) {
+    function uploadFile(file, numberOfFilesUploaded) {
         const url = window.location.href.replace(/\/$/, '') + '/upload';
         const xhr = new XMLHttpRequest();
         const formData = new FormData();
@@ -273,10 +293,13 @@
         xhr.onreadystatechange = function() {
             if (xhr.readyState === 4 && xhr.status === 200) {
 
-                setTimeout(function() {
-                    console.log("Reloading...")
-                    location.reload();
-                }, 2000);
+                if (numberOfFilesUploaded === 1) {
+                    setTimeout(function() {
+                        console.log("Reloading...")
+                        location.reload();
+                    }, 2000);
+                }
+
             }
         };
 

@@ -143,7 +143,16 @@ public class RoutingHelper {
                         return fileDetails;
                     })
                     .collect(Collectors.toList());
-            String body = MAPPER.writeValueAsString(Collections.singletonMap("items", results));
+
+            long sum = Arrays.stream(files)
+                    .map(File::length)
+                    .mapToLong(Long::intValue).sum();
+
+            String totalFormatted = formatSize(sum);
+            Map<String, Object> map = new HashMap<>();
+            map.put("items", results);
+            map.put("total", totalFormatted);
+            String body = MAPPER.writeValueAsString(map);
             routingContext.response().end(body);
         } catch (Exception e) {
             e.printStackTrace();
