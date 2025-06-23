@@ -52,8 +52,24 @@
             padding: 12px 20px;
             border-bottom: 1px solid #ccd;
             font-size: 15px;
-            text-align: center;
             color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .logout-button {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 6px 12px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
         }
         table {
             width: 100%;
@@ -120,7 +136,8 @@
 </head>
 <body>
 <div class="info-bar" id="informationBar">
-    <strong>Info:</strong> Upload files by dragging them to the right panel. Use the search box to filter files.
+    <div id="informationBar1"> </div>
+    <button class="logout-button" onclick="logoutUser()">Logout</button>
 </div>
 
 <div class="container">
@@ -241,7 +258,7 @@
                     tableBody.appendChild(row);
                 });
 
-                const informationBar = document.getElementById("informationBar");
+                const informationBar = document.getElementById("informationBar1");
                 informationBar.innerHTML = `Total Size: ${items.total}, Number of Items: ${items.items.length}`;
             })
             .catch(error => {
@@ -305,6 +322,16 @@
 
         xhr.open('POST', url, true);
         xhr.send(formData);
+    }
+
+    function setCookie(name, value, days) {
+        const expires = new Date(Date.now() + days * 864e5).toUTCString();
+        document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+    }
+
+    function logoutUser() {
+        setCookie("auth_token", "", 7);
+        location.reload();
     }
 
 </script>
