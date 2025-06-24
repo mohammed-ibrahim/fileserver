@@ -225,7 +225,24 @@ public class RoutingHelper {
         ctx.response().end("Internal Server Error");
     }
 
+    public static void uploadFileV2(RoutingContext routingContext) {
+        routingContext.response().putHeader("Content-Type", "text/plain");
+        routingContext.response().setChunked(true);
+
+        for (FileUpload f : routingContext.fileUploads()) {
+            System.out.println("f");
+            routingContext.response().write("Filename: " + f.fileName());
+            routingContext.response().write("\n");
+            routingContext.response().write("Size: " + f.size());
+        }
+
+        routingContext.response().end();
+    }
+
     public static void uploadFile(RoutingContext routingContext) {
+        routingContext.request().handler(buffer -> {
+           System.out.println("Buffer received: " + buffer.toString());
+        });
         routingContext.fileUploads().forEach( f -> {
             copyFileFromUploadsDirToWebDir(f);
         });
@@ -236,14 +253,15 @@ public class RoutingHelper {
     private static void copyFileFromUploadsDirToWebDir(FileUpload f) {
         System.out.println(f.uploadedFileName());
         String filePath = FileNameHelper.getFileName(Utils.getWebDirectory(), f.fileName());
-
+        System.out.println("Final file path: " + filePath.toString());
         try {
             FileUtils.copyFile(new File(f.uploadedFileName()), new File(filePath));
+            System.out.println("Copying successful");
+            new File(f.uploadedFileName()).delete();
+            System.out.println("Deletion successful");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-        new File(f.uploadedFileName()).delete();
     }
 
     public static void downloadFile(RoutingContext routingContext) {
