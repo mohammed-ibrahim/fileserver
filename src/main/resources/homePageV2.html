@@ -27,8 +27,10 @@
             padding: 20px;
             box-sizing: border-box;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            flex-direction: column;
+            align-items: stretch; /* fill width */
+            justify-content: flex-start; /* align to top */
+            overflow-y: auto;
         }
         .search-bar {
             display: flex;
@@ -160,10 +162,50 @@
     </div>
 
     <div class="right-panel">
-        <div class="drop-area" id="dropzone">
-            Drag & Drop files here to upload
+        <div style="display: flex; flex-direction: column; width: 100%; gap: 10px;">
+            <!-- Label above the curl command -->
+            <div style="font-weight: bold; font-size: 15px; color: #333;">
+                Upload with curl
+            </div>
+
+            <!-- Curl command box with copy button -->
+            <div style="
+        background-color: #f9f9f9;
+        border: 1px solid #ccc;
+        padding: 10px;
+        font-family: monospace;
+        font-size: 14px;
+        border-radius: 6px;
+        word-break: break-word;
+        position: relative;
+    ">
+        <span id="curlCommand">
+            curl -X POST http://localhost:8080/upload -F "file=@yourfile.txt"
+        </span>
+                <button onclick="copyCurlCommand()" style="
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        ">Copy</button>
+            </div>
+
+            <!-- Drag and Drop Area -->
+            <div class="drop-area" id="dropzone">
+                Drag & Drop files here to upload
+            </div>
         </div>
+
+
     </div>
+
+
 </div>
 
 <div class="progress-container" id="progressContainer">
@@ -265,7 +307,22 @@
                 console.error("Error loading items:", error);
                 tableBody.innerHTML = "<li>Error loading items</li>";
             });
+
+        const url = buildFullUploadUrl("/upload");
+        document.getElementById("curlCommand").innerText = `curl -X POST ${url} -F "file=@fileToBeUploaded.txt"`;
     });
+
+    function buildFullUploadUrl(apiPath) {
+        if (!apiPath) {
+            throw new Error("apiPath is required");
+        }
+
+        const scheme = window.location.protocol.replace(':', ''); // "http" or "https"
+        const host = window.location.host;
+        const normalizedPath = apiPath.startsWith("/") ? apiPath : "/" + apiPath;
+
+        return `${scheme}://${host}${normalizedPath}`;
+    }
 
     const dropzone = document.getElementById('dropzone');
 
@@ -290,6 +347,28 @@
             }
         }
     });
+
+    function copyCurlCommand() {
+        const button = event.target;
+        const curlText = document.getElementById("curlCommand").innerText;
+
+        navigator.clipboard.writeText(curlText).then(() => {
+            // Change button text to "Copied!"
+            const originalText = button.innerText;
+            button.innerText = "Copied!";
+            button.disabled = true;
+
+            // Revert after 1.5 seconds
+            setTimeout(() => {
+                button.innerText = originalText;
+                button.disabled = false;
+            }, 1500);
+        }).catch(err => {
+            console.error("Copy failed:", err);
+            button.innerText = "Failed";
+        });
+    }
+
 
     function uploadFile(file, numberOfFilesUploaded) {
         const url = window.location.href.replace(/\/$/, '') + '/upload';

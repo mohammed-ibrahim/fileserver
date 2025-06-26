@@ -50,42 +50,7 @@ public class Main {
         router.get("/file/download/:fileId").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.downloadFile(routingContext)));
         router.get("/api/items").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.listItems(routingContext)));
         router.delete("/file/:fileId").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.deleteFile(routingContext)));
-
-        router.post("/upload").handler(ctx -> {
-            ctx.request().setExpectMultipart(true);
-
-            final boolean[] fileUploaded = {false};  // flag to track if any file was uploaded
-
-            ctx.request().uploadHandler(upload -> {
-                fileUploaded[0] = true;  // at least one file detected
-                String filename = upload.filename();
-                String filePath = FileNameHelper.getFileName(Utils.getWebDirectory(), filename);
-                String uploadPath = filePath;
-
-                System.out.println("Receiving file: " + filename);
-                upload.streamToFileSystem(uploadPath);
-
-                upload.exceptionHandler(err -> {
-                    System.err.println("Upload failed: " + err.getMessage());
-                    if (!ctx.response().ended()) {
-                        ctx.response().setStatusCode(500).end("Upload failed");
-                    }
-                });
-
-                upload.endHandler(v -> {
-                    System.out.println("Upload complete: " + filename);
-                    if (!ctx.response().ended()) {
-                        ctx.response().setStatusCode(200).end("File uploaded");
-                    }
-                });
-            });
-
-            ctx.request().endHandler(v -> {
-                if (!fileUploaded[0] && !ctx.response().ended()) {
-                    ctx.response().setStatusCode(400).end("No file uploaded");
-                }
-            });
-        });
+        router.post("/upload").handler(routingContext -> RoutingHelper.handleUploadOfFile(routingContext));
 
         router.route().failureHandler(ctx -> {
             Throwable failure = ctx.failure();
@@ -131,7 +96,7 @@ public class Main {
         }
     }
 
-    private static Future<Object> withRedirectToLoginPage(RoutingContext routingContext, Runnable action) {
+    private static void withRedirectToLoginPage(RoutingContext routingContext, Runnable action) {
         Cookie authz = routingContext.request().getCookie("auth_token");
         if (authz != null && RoutingHelper.verifyToken(authz.getValue())) {
             try {
@@ -142,7 +107,6 @@ public class Main {
         } else {
             RoutingHelper.renderLoginPage(routingContext);
         }
-        return Future.succeededFuture(new Object());
     }
 
 

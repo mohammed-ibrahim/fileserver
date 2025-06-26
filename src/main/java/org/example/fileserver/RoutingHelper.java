@@ -2,9 +2,7 @@ package org.example.fileserver;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.FileUpload;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.commons.io.FileUtils;
 
 import java.io.*;
 import java.net.URLDecoder;
@@ -118,8 +116,6 @@ public class RoutingHelper {
 
     }
 
-
-
     public static void unauthorized(RoutingContext routingContext) {
         routingContext.response().setStatusCode(401).end("NOT FOUND");
     }
@@ -199,14 +195,12 @@ public class RoutingHelper {
         }
     }
 
-
     public static String formatSize(long bytes) {
         if (bytes < 1024) return bytes + " B";
         int exp = (int) (Math.log(bytes) / Math.log(1024));
         String unit = "KMGTPE".charAt(exp - 1) + "B";
         return String.format("%.2f %s", bytes / Math.pow(1024, exp), unit);
     }
-
 
     public static Comparator<File> getFileTimeComparator() {
         return (f1, f2) -> {
@@ -225,45 +219,6 @@ public class RoutingHelper {
         ctx.response().end("Internal Server Error");
     }
 
-    public static void uploadFileV2(RoutingContext routingContext) {
-        routingContext.response().putHeader("Content-Type", "text/plain");
-        routingContext.response().setChunked(true);
-
-        for (FileUpload f : routingContext.fileUploads()) {
-            System.out.println("f");
-            routingContext.response().write("Filename: " + f.fileName());
-            routingContext.response().write("\n");
-            routingContext.response().write("Size: " + f.size());
-        }
-
-        routingContext.response().end();
-    }
-
-    public static void uploadFile(RoutingContext routingContext) {
-        routingContext.request().handler(buffer -> {
-           System.out.println("Buffer received: " + buffer.toString());
-        });
-        routingContext.fileUploads().forEach( f -> {
-            copyFileFromUploadsDirToWebDir(f);
-        });
-
-        routingContext.response().end();
-    }
-
-    private static void copyFileFromUploadsDirToWebDir(FileUpload f) {
-        System.out.println(f.uploadedFileName());
-        String filePath = FileNameHelper.getFileName(Utils.getWebDirectory(), f.fileName());
-        System.out.println("Final file path: " + filePath.toString());
-        try {
-            FileUtils.copyFile(new File(f.uploadedFileName()), new File(filePath));
-            System.out.println("Copying successful");
-            new File(f.uploadedFileName()).delete();
-            System.out.println("Deletion successful");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     public static void downloadFile(RoutingContext routingContext) {
         String fileId = routingContext.request().getParam("fileId");
         File downloadable = Paths.get(Utils.getWebDirectory(), fileId).toFile();
@@ -277,6 +232,42 @@ public class RoutingHelper {
             routingContext.response().setStatusCode(404);
             routingContext.response().end("Not Found");
         }
+    }
+
+    public static void handleUploadOfFile(RoutingContext routingContext) {
+        routingContext.request().setExpectMultipart(true);
+
+        final boolean[] fileUploaded = {false};  // flag to track if any file was uploaded
+
+        routingContext.request().uploadHandler(upload -> {
+            fileUploaded[0] = true;  // at least one file detected
+            String filename = upload.filename();
+            String filePath = FileNameHelper.getFileName(Utils.getWebDirectory(), filename);
+            String uploadPath = filePath;
+
+            System.out.println("Receiving file: " + filename);
+            upload.streamToFileSystem(uploadPath);
+
+            upload.exceptionHandler(err -> {
+                System.err.println("Upload failed: " + err.getMessage());
+                if (!routingContext.response().ended()) {
+                    routingContext.response().setStatusCode(500).end("Upload failed");
+                }
+            });
+
+            upload.endHandler(v -> {
+                System.out.println("Upload complete: " + filename);
+                if (!routingContext.response().ended()) {
+                    routingContext.response().setStatusCode(200).end("File uploaded");
+                }
+            });
+        });
+
+        routingContext.request().endHandler(v -> {
+            if (!fileUploaded[0] && !routingContext.response().ended()) {
+                routingContext.response().setStatusCode(400).end("No file uploaded");
+            }
+        });
     }
 
     public static void deleteFile(RoutingContext routingContext) {
