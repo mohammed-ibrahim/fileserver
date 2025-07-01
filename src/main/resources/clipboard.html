@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Copy & Delete Blocks with Header</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #f9f9f9;
+        }
+
+        .info-bar {
+            background-color: #eef;
+            padding: 12px 20px;
+            border-bottom: 1px solid #ccd;
+            font-size: 15px;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            height: 50px; /* optional: gives consistent height */
+            box-sizing: border-box;
+        }
+
+
+        .logout-button {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 4px 12px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1.5;
+            box-sizing: border-box;
+        }
+
+
+
+        .content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            padding: 60px 20px 20px;
+        }
+
+        .input-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        textarea {
+            padding: 10px;
+            font-size: 16px;
+            width: 100%;
+            height: 40px;
+            min-height: 40px;
+            max-height: 200px;
+            resize: vertical;
+            transition: all 0.3s ease;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            overflow-y: auto;
+        }
+
+        textarea:focus {
+            height: 100px;
+            outline: none;
+            border-color: #007bff;
+        }
+
+        textarea.expanded {
+            height: 100px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+            height: 40px;
+            align-self: flex-start;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .blocks-container {
+            margin-top: 30px;
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .block {
+            background-color: #e0e0e0;
+            padding: 12px 16px 40px 16px;
+            border-radius: 6px;
+            font-size: 16px;
+            white-space: pre-wrap;
+            position: relative;
+            transition: background-color 0.2s ease;
+        }
+
+        .block:hover {
+            background-color: #d0d0d0;
+        }
+
+        .copy-label, .delete-label {
+            position: absolute;
+            font-size: 12px;
+            color: #555;
+            background-color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+
+        .copy-label {
+            top: 6px;
+            right: 10px;
+        }
+
+        .delete-label {
+            top: 28px;
+            right: 10px;
+        }
+
+        .copy-message {
+            margin-top: 20px;
+            font-size: 14px;
+            color: green;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Info Bar -->
+<div class="info-bar">
+    <div id="infoText">Welcome to Text Block Manager</div>
+    <button class="logout-button" onclick="logoutUser()">Logout</button>
+</div>
+
+<div class="content">
+    <!-- Input Section -->
+    <div class="input-container">
+        <textarea id="textInput" placeholder="Enter multi-line text..."></textarea>
+        <button onclick="addNewClipBoardItem()">Add</button>
+    </div>
+
+    <!-- Blocks Area -->
+    <div class="blocks-container" id="blocksContainer"></div>
+    <div class="copy-message" id="copyMessage">Text copied!</div>
+</div>
+
+<script>
+    const textInput = document.getElementById("textInput");
+    const blocksContainer = document.getElementById("blocksContainer");
+    const copyMessage = document.getElementById("copyMessage");
+
+    textInput.addEventListener("focus", () => {
+        textInput.classList.add("expanded");
+    });
+
+    textInput.addEventListener("blur", () => {
+        if (textInput.value.trim() === "") {
+            textInput.classList.remove("expanded");
+        }
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+        const apiUrl = "/clipboard/items";
+        const informationBar = document.getElementById("infoText");
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to fetch items");
+                }
+                return response.json();
+            })
+            .then(items => {
+                items.items.forEach(item => {
+                    addBlock(item.text, item.id);
+                });
+                informationBar.innerHTML = `Total Clips in page: ${items.totalItemsInCurrentPage}, Number of saved clips: ${items.totalItems}`;
+            })
+            .catch(error => {
+                console.error("Error loading items:", error);
+                informationBar.innerHTML = error;
+            });
+    });
+
+    function sendHtml() {
+        const inputText = document.getElementById('textInput').value;
+
+        if (!inputText) {
+            alert('Input cannot be empty or blank.');
+            return;
+        }
+
+        try {
+            const response = fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/html'
+                },
+                body: inputText
+            });
+
+            if (response.status === 200) {
+                location.reload();
+            } else {
+                console.error('Request failed with status:', response.status);
+                alert("Failed to add new clipboard item");
+            }
+        } catch (error) {
+            console.error('Error during POST request:', error);
+        }
+    }
+
+    async function addNewClipBoardItem() {
+        const inputText = document.getElementById('textInput').value.trim();
+
+        if (!inputText) {
+            alert('Input cannot be empty or blank.');
+            return;
+        }
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/html'
+                },
+                body: inputText
+            });
+
+            if (response.status === 200) {
+                location.reload();
+            } else {
+                console.error('Request failed with status:', response.status);
+            }
+        } catch (error) {
+            console.error('Error during POST request:', error);
+        }
+    }
+
+    function addBlock(text, id) {
+        if (text !== "") {
+            const block = document.createElement("div");
+            block.className = "block";
+            block.textContent = text;
+
+            const copyLabel = document.createElement("div");
+            copyLabel.className = "copy-label";
+            copyLabel.textContent = "Click to copy";
+            copyLabel.onclick = (e) => {
+                e.stopPropagation();
+                copyToClipboard(text);
+            };
+
+            const deleteLabel = document.createElement("div");
+            deleteLabel.className = "delete-label";
+            deleteLabel.textContent = "Delete";
+            deleteLabel.onclick = (e) => {
+                e.stopPropagation();
+                deleteClipItemAndReload(id);
+                block.remove();
+            };
+
+            block.appendChild(copyLabel);
+            block.appendChild(deleteLabel);
+
+            blocksContainer.appendChild(block);
+            textInput.value = "";
+            textInput.classList.remove("expanded");
+        }
+    }
+
+    function deleteClipItemAndReload(id) {
+        const url = window.location.href.replace(/\/$/, '') + '/' + id;
+        const xhr = new XMLHttpRequest();
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                console.log("Reloading...")
+                location.reload();
+            }
+
+            if (xhr.readyState === 4 && xhr.status !== 200) {
+                alert("Deletion of the clipitem failed: " + id);
+            }
+        };
+
+        xhr.open('DELETE', url, true);
+        xhr.send();
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            showCopyMessage();
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+        });
+    }
+
+    function showCopyMessage() {
+        copyMessage.style.display = "block";
+        setTimeout(() => {
+            copyMessage.style.display = "none";
+        }, 2000);
+    }
+
+    function logoutUser() {
+        alert("Logged out (simulate logout action)");
+        // You can replace this with a real logout implementation if needed
+    }
+</script>
+
+</body>
+</html>

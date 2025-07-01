@@ -43,6 +43,8 @@ public class Main {
 
         HttpServer server = vertx.createHttpServer(httpServerOptions);
         Router router = Router.router(vertx);
+
+        // File Server Paths
         router.get("/").handler(routingContext -> withRedirectToLoginPage(routingContext, () -> RoutingHelper.renderHomePage(routingContext)));
         router.post("/login").handler(BodyHandler.create()).handler(routingContext -> {
             RoutingHelper.performLogin(routingContext);
@@ -51,6 +53,12 @@ public class Main {
         router.get("/api/items").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.listItems(routingContext)));
         router.delete("/file/:fileId").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.deleteFile(routingContext)));
         router.post("/upload").handler(routingContext -> RoutingHelper.handleUploadOfFile(routingContext));
+
+        // File Server Paths
+        router.get("/clipboard").handler(routingContext -> withRedirectToLoginPage(routingContext, () -> RoutingHelper.renderClipBoardPage(routingContext)));
+        router.get("/clipboard/items").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.listClipBoardItems(routingContext)));
+        router.post("/clipboard").handler(BodyHandler.create()).handler(routingContext -> withRedirectToLoginPage(routingContext, () -> RoutingHelper.addClipBoardItem(routingContext)));
+        router.delete("/clipboard/:clipboardId").handler(routingContext -> withRedirectToLoginPage(routingContext, () -> RoutingHelper.deleteClipBoardItem(routingContext)));
 
         router.route().failureHandler(ctx -> {
             Throwable failure = ctx.failure();

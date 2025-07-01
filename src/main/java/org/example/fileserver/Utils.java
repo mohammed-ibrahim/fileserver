@@ -6,6 +6,10 @@ public class Utils {
         return getFromSystemPropertyOrDefault("uploads.dir", "web");
     }
 
+    public static String getClipboardDirectory() {
+        return getFromSystemPropertyOrDefault("clipboard.dir", "clipboard");
+    }
+
     public static String getUserAuthFilePath() {
         return getFromSystemPropertyOrDefault("auth.file", "auth.conf");
     }

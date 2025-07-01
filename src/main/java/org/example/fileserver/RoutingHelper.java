@@ -3,6 +3,7 @@ package org.example.fileserver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.commons.io.FileUtils;
 
 import java.io.*;
 import java.net.URLDecoder;
@@ -36,6 +37,88 @@ public class RoutingHelper {
             throw new RuntimeException(e);
         }
 
+    }
+
+    public static void renderClipBoardPage(RoutingContext routingContext) {
+        String homePage = loadHtmlFromResources("clipboard.html");
+        routingContext.response().end(homePage);
+    }
+
+    public static void addClipBoardItem(RoutingContext routingContext) {
+        String requestBody = routingContext.body().asString();
+        String clipBoardId = UUID.randomUUID().toString();
+        File clipBoardFile = Paths.get(Utils.getClipboardDirectory(), clipBoardId).toFile();
+
+        try {
+            FileUtils.writeStringToFile(clipBoardFile, requestBody, StandardCharsets.UTF_8);
+            routingContext.response().setStatusCode(200).end();
+        } catch (IOException e) {
+            e.printStackTrace();
+            fail(routingContext);
+        }
+    }
+
+    public static void deleteClipBoardItem(RoutingContext routingContext) {
+        String fileId = routingContext.request().getParam("clipboardId");
+        File deletableFile = Paths.get(Utils.getClipboardDirectory(), fileId).toFile();
+
+        if (deletableFile.isFile()) {
+            deletableFile.delete();
+            routingContext.response().setStatusCode(200).end();
+        } else {
+            routingContext.response().setStatusCode(404);
+            routingContext.response().end("Not Found");
+        }
+    }
+
+    public static String getFileContents(File file) {
+        try {
+            return FileUtils.readFileToString(file, StandardCharsets.UTF_8).trim();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void listClipBoardItems(RoutingContext routingContext) {
+        try {
+            File directory = new File(Utils.getClipboardDirectory());
+            File[] files = directory.listFiles();
+
+            if (files == null || files.length == 0) {
+                ClipboardResponse clipboardResponse = new ClipboardResponse();;
+                clipboardResponse.setItems(Collections.emptyList());
+                clipboardResponse.setTotalItems(0);
+                clipboardResponse.setTotalItemsInCurrentPage(0);
+                String body = MAPPER.writeValueAsString(clipboardResponse);
+                routingContext.response().putHeader("content-type", "application/json; charset=utf-8");
+                routingContext.response().end(body);
+                return;
+            }
+
+            List<ClipboardItem> results = Arrays.stream(files)
+                    .sorted(getFileTimeComparator())
+                    .limit(50)
+                    .map(file -> {
+
+                        ClipboardItem clipboardItem = new ClipboardItem();
+                        clipboardItem.setId(file.getName());
+                        clipboardItem.setText(getFileContents(file));
+
+                        return clipboardItem;
+                    })
+                    .collect(Collectors.toList());
+
+            ClipboardResponse clipboardResponse = new ClipboardResponse();
+            clipboardResponse.setItems(results);
+            clipboardResponse.setTotalItemsInCurrentPage(results.size());
+            clipboardResponse.setTotalItems(files.length);
+            String body = MAPPER.writeValueAsString(clipboardResponse);
+            routingContext.response().end(body);
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail(routingContext);
+        }
     }
 
     public static void renderHomePage(RoutingContext routingContext) {
