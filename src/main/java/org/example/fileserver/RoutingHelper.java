@@ -215,12 +215,18 @@ public class RoutingHelper {
             List<FileDetails> results = Arrays.stream(files)
                     .sorted(getFileTimeComparator())
                     .map(file -> {
-                        FileDetails fileDetails = new FileDetails();
-                        fileDetails.setFileName(file.getName());
-                        fileDetails.setDate(getRelativeCreationDate(file));
-                        fileDetails.setSize(formatSize(file.length()));
-                        return fileDetails;
+                        try {
+                            FileDetails fileDetails = new FileDetails();
+                            fileDetails.setFileName(file.getName());
+                            fileDetails.setDate(getRelativeCreationDate(file));
+                            fileDetails.setSize(formatSize(file.length()));
+                            return fileDetails;
+                        } catch (Exception e) {
+                            System.err.println("Error reading file: " + e.getMessage());
+                            return null;
+                        }
                     })
+                    .filter(Objects::nonNull)
                     .collect(Collectors.toList());
 
             long sum = Arrays.stream(files)
@@ -292,7 +298,9 @@ public class RoutingHelper {
                 BasicFileAttributes attr2 = Files.readAttributes(f2.toPath(), BasicFileAttributes.class);
                 return attr2.creationTime().compareTo(attr1.creationTime());
             } catch (IOException e) {
-                throw new RuntimeException("Failed to read file attributes", e);
+                System.out.println("Failed to read file attributes");
+                e.printStackTrace();
+                return 0;
             }
         };
     }
