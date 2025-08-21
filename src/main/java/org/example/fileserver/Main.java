@@ -6,7 +6,6 @@ import io.vertx.core.http.Cookie;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.KeyStoreOptions;
-import io.vertx.ext.web.FileUpload;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -53,8 +52,10 @@ public class Main {
         router.get("/api/items").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.listItems(routingContext)));
         router.delete("/file/:fileId").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.deleteFile(routingContext)));
         router.post("/upload").handler(routingContext -> RoutingHelper.handleUploadOfFile(routingContext));
+        router.post("/short/:fileId").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.generateShortLink(routingContext)));
+        router.get("/short/:shortId").handler(routingContext -> RoutingHelper.downloadFileFromShortLink(routingContext));
 
-        // File Server Paths
+        // Clipboard Paths
         router.get("/clipboard").handler(routingContext -> withRedirectToLoginPage(routingContext, () -> RoutingHelper.renderClipBoardPage(routingContext)));
         router.get("/clipboard/items").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.listClipBoardItems(routingContext)));
         router.post("/clipboard").handler(BodyHandler.create()).handler(routingContext -> withRedirectToLoginPage(routingContext, () -> RoutingHelper.addClipBoardItem(routingContext)));

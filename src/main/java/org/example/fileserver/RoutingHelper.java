@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 
 import java.io.*;
 import java.net.URLDecoder;
@@ -312,6 +313,10 @@ public class RoutingHelper {
 
     public static void downloadFile(RoutingContext routingContext) {
         String fileId = routingContext.request().getParam("fileId");
+        downloadFileByFileId(routingContext, fileId);
+    }
+
+    private static void downloadFileByFileId(RoutingContext routingContext, String fileId) {
         File downloadable = Paths.get(Utils.getWebDirectory(), fileId).toFile();
 
         if (downloadable.isFile()) {
@@ -319,6 +324,26 @@ public class RoutingHelper {
                     .putHeader("Content-Disposition", "attachment; filename=" + downloadable.getName())
                     .putHeader("Content-Type", "application/octet-stream")
                     .sendFile(downloadable.getPath());
+        } else {
+            routingContext.response().setStatusCode(404);
+            routingContext.response().end("Not Found");
+        }
+    }
+
+    public static void downloadFileFromShortLink(RoutingContext routingContext) {
+        String shortId = routingContext.request().getParam("shortId");
+        String extension = ".txt";
+        String fileName = shortId + extension;
+        File shortLinkFile = Paths.get(Utils.getShortLinkDirectory(), fileName).toFile();
+
+        if (shortLinkFile.isFile()) {
+          try {
+              String fileId = FileUtils.readFileToString(shortLinkFile, StandardCharsets.UTF_8);
+              downloadFileByFileId(routingContext, fileId);
+          } catch (IOException e) {
+              e.printStackTrace();
+            throw new RuntimeException(e);
+          }
         } else {
             routingContext.response().setStatusCode(404);
             routingContext.response().end("Not Found");
@@ -372,5 +397,19 @@ public class RoutingHelper {
             routingContext.response().setStatusCode(404);
             routingContext.response().end("Not Found");
         }
+    }
+
+    public static void generateShortLink(RoutingContext routingContext) {
+        String fileId = routingContext.request().getParam("fileId");
+        String randomString = RandomStringUtils.random(8, "ABCDEFGHIJKLMNOPQRSTUVW0123456789");
+        String extension = ".txt";
+        File shortLinkFile = Paths.get(Utils.getShortLinkDirectory(), randomString + extension).toFile();
+      try {
+        FileUtils.writeStringToFile(shortLinkFile, fileId, StandardCharsets.UTF_8);
+      } catch (IOException e) {
+        e.printStackTrace();
+        throw new RuntimeException(e);
+      }
+      routingContext.response().setStatusCode(200).end(shortLinkFile.getName().replace(extension, ""));
     }
 }

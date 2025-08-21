@@ -107,6 +107,15 @@
             padding: 5px 10px;
             cursor: pointer;
         }
+
+        button.shortLink {
+            background-color: #aaaadf;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
         .progress-container {
             padding: 10px;
             border-top: 1px solid #ccc;
@@ -240,6 +249,36 @@
         xhr.send();
     }
 
+    function createShortLink(fileId) {
+
+        const isConfirmed = confirm(`Are you sure you want create short link for '${fileId}'?`);
+        if (!isConfirmed) {
+            return;
+        }
+
+        const url = window.location.href.replace(/\/$/, '') + '/short' + fileId;
+        const xhr = new XMLHttpRequest();
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                var shortLink = xhr.responseText;
+                const shortLinkUrl = window.location.href.replace(/\/$/, '') + "/short/" + shortLink;
+
+                alert("Your short link is: " + shortLinkUrl);
+                console.log(shortLinkUrl);
+
+
+            }
+
+            if (xhr.readyState === 4 && xhr.status !== 200) {
+                alert("Deletion of the file failed: " + fileId);
+            }
+        };
+
+        xhr.open('POST', url, true);
+        xhr.send();
+    }
+
     function filterFiles() {
         const searchInput = document.getElementById('searchInput');
         const query = searchInput.value.toLowerCase();
@@ -295,6 +334,7 @@
                         <td>${item.date}</td>
                         <td>${item.size}</td>
                         <td><button class="delete" onclick="deleteFile('/${item.fileName}')">Delete</button></td>
+                        <td><button class="shortLink" onclick="createShortLink('/${item.fileName}')">Gen Link</button></td>
                       `;
 
                     tableBody.appendChild(row);

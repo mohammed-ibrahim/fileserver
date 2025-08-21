@@ -43,4 +43,8 @@ public class Utils {
     public static String getFromSystemPropertyOrDefault(String key, String defaultValue) {
         return System.getProperty(key, defaultValue);
     }
+
+    public static String getShortLinkDirectory() {
+        return getFromSystemPropertyOrDefault("short.link.dir", "short");
+    }
 }
