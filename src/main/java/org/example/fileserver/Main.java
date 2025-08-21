@@ -52,8 +52,8 @@ public class Main {
         router.get("/api/items").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.listItems(routingContext)));
         router.delete("/file/:fileId").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.deleteFile(routingContext)));
         router.post("/upload").handler(routingContext -> RoutingHelper.handleUploadOfFile(routingContext));
-        router.post("/short/:fileId").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.generateShortLink(routingContext)));
-        router.get("/short/:shortId").handler(routingContext -> RoutingHelper.downloadFileFromShortLink(routingContext));
+        router.post("/s/:fileId").handler(routingContext -> withAuth(routingContext, () -> RoutingHelper.generateShortLink(routingContext)));
+        router.get("/s/:shortId").handler(routingContext -> RoutingHelper.downloadFileFromShortLink(routingContext));
 
         // Clipboard Paths
         router.get("/clipboard").handler(routingContext -> withRedirectToLoginPage(routingContext, () -> RoutingHelper.renderClipBoardPage(routingContext)));

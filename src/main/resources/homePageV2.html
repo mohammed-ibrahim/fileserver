@@ -256,13 +256,13 @@
             return;
         }
 
-        const url = window.location.href.replace(/\/$/, '') + '/short' + fileId;
+        const url = window.location.href.replace(/\/$/, '') + '/s' + fileId;
         const xhr = new XMLHttpRequest();
 
         xhr.onreadystatechange = function() {
             if (xhr.readyState === 4 && xhr.status === 200) {
                 var shortLink = xhr.responseText;
-                const shortLinkUrl = window.location.href.replace(/\/$/, '') + "/short/" + shortLink;
+                const shortLinkUrl = window.location.href.replace(/\/$/, '') + "/s/" + shortLink;
 
                 alert("Your short link is: " + shortLinkUrl);
                 console.log(shortLinkUrl);
