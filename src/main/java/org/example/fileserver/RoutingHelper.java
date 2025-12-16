@@ -10,6 +10,8 @@ import java.io.*;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
@@ -386,13 +388,32 @@ public class RoutingHelper {
         });
     }
 
+    private static boolean safeDelete(Path path) {
+        for (int i = 0; i < 5; i++) {
+            try {
+                Files.delete(path);
+                return true;
+            } catch (IOException e) {
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException ignored) {}
+            }
+        }
+
+        return false;
+    }
+
     public static void deleteFile(RoutingContext routingContext) {
         String fileId = routingContext.request().getParam("fileId");
-        File deletableFile = Paths.get(Utils.getWebDirectory(), fileId).toFile();
+        Path deletableFile = Paths.get(Utils.getWebDirectory(), fileId);
 
-        if (deletableFile.isFile()) {
-            deletableFile.delete();
-            routingContext.response().setStatusCode(200).end();
+        if (deletableFile.toFile().isFile()) {
+            if (safeDelete(deletableFile)) {
+                routingContext.response().setStatusCode(200).end();
+            } else {
+                routingContext.response().setStatusCode(500);
+                routingContext.response().end("Failed to delete");
+            }
         } else {
             routingContext.response().setStatusCode(404);
             routingContext.response().end("Not Found");
